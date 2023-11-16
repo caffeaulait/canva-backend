@@ -1,0 +1,52 @@
+version: "3.7"
+
+services:
+  app:
+    image: gradle:8.1.0-jdk17
+    working_dir: /app
+    volumes:
+      - .:/app
+      - gradle-cache:/home/gradle/.gradle
+    networks:
+      - app_net
+    env_file:
+      - docker.env
+    ports:
+      - 8080:8080
+      - 5005:5005
+    command: gradle bootRun
+    depends_on:
+      - db
+
+  test:
+    image: gradle:8.1.0-jdk17
+    working_dir: /app
+    volumes:
+      - .:/app
+      - gradle-cache:/home/gradle/.gradle
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - app_net
+    command: gradle clean check
+
+  db:
+    image: postgres:15.2
+    restart: always
+    privileged: true
+    environment:
+      POSTGRES_USER: local
+      POSTGRES_PASSWORD: local_pwd
+      POSTGRES_DB: scaffold
+    volumes:
+      - ./db-data/:/var/lib/postgresql/data/
+    networks:
+      - app_net
+    ports:
+      - 5432:5432
+
+networks:
+  app_net:
+
+volumes:
+  gradle-cache:
+  db-cache:

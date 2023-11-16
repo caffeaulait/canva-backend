@@ -1,0 +1,173 @@
+plugins {
+    id 'org.springframework.boot' version '3.0.5'
+    id "io.spring.dependency-management" version "1.1.0"
+    id 'java'
+    id 'checkstyle'
+    id 'jacoco'
+    id 'pmd'
+    id "io.freefair.lombok" version "8.0.1"
+    id "org.flywaydb.flyway" version "9.16.3"
+}
+
+project(":") {
+    group = 'com.scaffold'
+    version = '1.0.0'
+    sourceCompatibility = '17'
+
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+
+    pmd {
+        toolVersion = '6.37.0'
+        ruleSetFiles = files('config/pmd.xml')
+        ruleSets = []
+        consoleOutput = true
+    }
+
+    checkstyleMain {
+        configFile = file('config/checkstyle.xml')
+        maxWarnings = 0
+        maxErrors = 0
+    }
+
+    checkstyleTest {
+        configFile = file('config/checkstyle.xml')
+        maxWarnings = 0
+        maxErrors = 0
+    }
+
+    jacoco {
+        toolVersion = "0.8.9"
+    }
+
+    jacocoTestReport {
+        reports {
+            xml.required = false
+            csv.required = false
+            html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+        }
+
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(dir: it,
+                        exclude: [
+                                'com/scaffold/BootApplication.class',
+                                'com/scaffold/api/diagnosis/DatabaseHealthCheck.class',
+                                'com/scaffold/api/IndexController'
+                        ]
+                )
+            }))
+        }
+    }
+
+    jacocoTestCoverageVerification {
+        dependsOn 'jacocoTestReport'
+
+        violationRules {
+            rule {
+                element = 'CLASS'
+                limit {
+                    minimum = 1.0
+                }
+                excludes = [
+                        'com.scaffold.BootApplication',
+                        'com.scaffold.api.diagnosis.DatabaseHealthCheck',
+                        'com.scaffold.api.IndexController'
+                ]
+            }
+        }
+    }
+
+    lombok {
+        version = "1.18.26"
+    }
+
+    test {
+        useJUnitPlatform()
+        exclude "com/scaffold/integration/**"
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
+    }
+
+    flyway {
+        url = "jdbc:postgresql://${project.findProperty("DB_HOST") ?: "localhost"}:5432/scaffold"
+        user = 'local'
+        password = 'local_pwd'
+    }
+
+    task integrationTest(type: Test) {
+        useJUnitPlatform()
+        include "com/scaffold/integration/**"
+
+        beforeTest { descriptor ->
+            logger.lifecycle("Running test: " + descriptor)
+        }
+
+        onOutput { descriptor, event ->
+            logger.lifecycle(event.message)
+        }
+    }
+
+    ext {
+        NEWRELIC = 'com.newrelic.agent.java:newrelic-agent:6.4.2'
+    }
+
+    configurations {
+        newrelic
+        developmentOnly
+        runtimeClasspath {
+            extendsFrom developmentOnly
+        }
+    }
+
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter'
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-starter-hateoas'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.boot:spring-boot-starter-graphql'
+
+        implementation 'org.flywaydb:flyway-core:9.16.3'
+        implementation 'net.logstash.logback:logstash-logback-encoder:7.3'
+        implementation 'org.postgresql:postgresql:42.6.0'
+
+        testImplementation('org.springframework.boot:spring-boot-starter-test') {
+            exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+        }
+        testImplementation 'org.testcontainers:postgresql:1.18.0'
+        testImplementation 'io.rest-assured:json-schema-validator:4.3.3'
+        testImplementation 'com.github.tomakehurst:wiremock:2.25.1'
+
+        developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+        newrelic(NEWRELIC)
+    }
+
+    bootRun {
+        jvmArgs = ["-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005"]
+    }
+
+    task copyNewrelicAgent(type: Copy) {
+        from configurations.newrelic
+        into 'build/libs/'
+        rename { String fileName ->
+            "newrelic.jar"
+        }
+    }
+
+    check {
+        dependsOn 'integrationTest'
+        dependsOn 'jacocoTestReport'
+        dependsOn 'jacocoTestCoverageVerification'
+        dependsOn 'pmdMain'
+        dependsOn 'pmdTest'
+    }
+
+    processResources {
+        dependsOn 'copyNewrelicAgent'
+    }
+}

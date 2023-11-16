@@ -1,0 +1,34 @@
+name: CI/CD for master
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: 🪐 Do a full test for this project.
+        run: auto/test
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🛫 executing remote ssh commands using ssh key
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          cd ~/scaffold-springboot-gradle
+          git pull origin master
+          echo Pulling newest code from github.
+          docker-compose down
+          echo Shutdown original server
+          docker-compose run -d app
+          echo Server started...
+
+

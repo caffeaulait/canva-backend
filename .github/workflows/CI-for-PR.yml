@@ -1,0 +1,13 @@
+name: CI for pull requests
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: 🪐 Do a full test for this project.
+        run: auto/test
