@@ -8,3 +8,7 @@ spring:
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
+aws:
+  accessKey: AKIAQT7OSLRQNTHVIGY4
+  secretKey: 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
+  region: us-east-2
