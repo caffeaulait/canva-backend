@@ -10,5 +10,5 @@ spring:
 
 aws:
   accessKey: AKIAQT7OSLRQNTHVIGY4
-  secretKey: 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
+  secretKey:
   region: us-east-2
