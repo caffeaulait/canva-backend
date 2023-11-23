@@ -137,7 +137,8 @@ project(":") {
         implementation group: 'org.bytedeco', name: 'javacv-platform', version: '1.5.9'
         implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.529')
         implementation 'com.amazonaws:aws-java-sdk-s3'
-
+        implementation 'com.auth0:jwks-rsa:0.22.1'
+        implementation 'com.auth0:java-jwt:3.3.0'
         testImplementation('org.springframework.boot:spring-boot-starter-test') {
             exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
         }
